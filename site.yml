@@ -1,43 +1,135 @@
 ---
-
 - hosts: all
   become: true
   pre_tasks:
+    - name: Install updates (CentOS)
+      tags: always
+      dnf:
+        update_only: yes
+        update_cache: yes
+      when: ansible_distribution == "CentOS"
 
-  - name: install updates(CentOS)
-    dnf:
-      update_only: yes
-      update_cache: yes
-    when: ansible_distribution =="CentOS"
-
-  - name: install updates(Ubuntu)
-    apt:
-      upgrade: dist
-      update_cache: yes
-    when: ansible_distribution == "Ubuntu"
+    - name: Install updates (Ubuntu)
+      tags: always
+      apt:
+        upgrade: dist
+        update_cache: yes
+      when: ansible_distribution == "Ubuntu"
 
 - hosts: web_servers
   become: true
   tasks:
+    - name: Install Apache and PHP for Ubuntu servers
+      tags: 
+        - apache
+        - apache2
+        - ubuntu
+      apt:
+        name:
+          - apache2
+          - libapache2-mod-php
+        state: latest
+      when: ansible_distribution == "Ubuntu"
 
-- hosts: all
+    - name: Install Apache and PHP for CentOS servers
+      tags: 
+        - apache
+        - apache2
+        - httpd
+      dnf:
+        name:
+          - httpd
+          - php
+        state: latest
+      when: ansible_distribution == "CentOS"
+
+- hosts: db_servers
   become: true
   tasks:
+    - name: Install MariaDB package (CentOS)
+      tags: 
+        - centos
+        - db
+        - mariadb
+      dnf:
+        name: mariadb-server
+        state: latest
+      when: ansible_distribution == "CentOS"
 
-  - name: install apache and php for Ubuntu servers
-    apt:
-      name:
-        - apache2
-        - libapache2-mod-php
-      state: latest
-      update_cache: yes
-    when: ansible_distribution == "Ubuntu"
+    - name: Mariadb - Restarting and Enabling (CentOS)
+      tags: 
+        - centos
+        - db
+        - mariadb
+      systemd:
+        name: mariadb
+        enabled: yes
+        state: restarted
+      when: ansible_distribution == "CentOS"
 
-  - name: install apache and php CentOS servers
-    dnf:
-      name:
+    - name: Install MariaDB package (Ubuntu)
+      tags: 
+        - db
+        - mariadb
+        - ubuntu
+      apt:
+        name: mariadb-server
+        state: latest
+      when: ansible_distribution == "Ubuntu"
+
+- hosts: file_servers
+  become: true
+  tasks:
+    - name: Install Samba package
+      tags: 
+        - samba
+      package:
+        name: samba
+        state: latest
+
+    - name: Install Apache and PHP for CentOS servers
+      tags: 
+        - apache
+        - centos
         - httpd
-        - php
-      state: latest
-    when: ansible_distribution == "CentOs"
+      dnf:
+        name:
+          - httpd
+          - php
+        state: latest
+      when: ansible_distribution == "CentOS"
+
+    - name: Start httpd (CentOS)
+      tags: 
+        - apache
+        - centos
+        - httpd
+      service:
+        name: httpd
+        state: started
+      when: ansible_distribution == "CentOS"
+
+- hosts: db_servers
+  become: true
+  tasks:
+    - name: Install MariaDB package (CentOS)
+      tags: 
+        - centos
+        - db
+        - mariadb
+      dnf:
+        name: mariadb-server
+        state: latest
+      when: ansible_distribution == "CentOS"
+
+    - name: "Mariadb - Restarting/Enabling"
+      tags: 
+        - centos
+        - db
+        - mariadb
+      systemd:
+        name: mariadb
+        enabled: yes
+        state: restarted
+
 
